@@ -15,7 +15,6 @@ import (
 	g "github.com/onsi/ginkgo/v2"
 	o "github.com/onsi/gomega"
 	x "github.com/onsi/gomega/gexec"
-	"golang.org/x/exp/maps"
 )
 
 func TestScyllaOperatorTestsReproducer(t *testing.T) {
@@ -48,47 +47,54 @@ var _ = g.Describe("Scylla Operator Tests Reproducer", func() {
 	o.Expect(discard).To(o.HaveLen(1))
 
 	report := discard[0]
-	leafNodeTextsRanMap := make(map[string][]int, 0)
-	for _, sr := range []g.SpecReport(report.SpecReports) {
-		leafNodeTextsRanMap[sr.LeafNodeText] = append(leafNodeTextsRanMap[sr.LeafNodeText], sr.ParallelProcess)
+	var specsRan []string
+	for _, sr := range report.SpecReports {
+		specsRan = append(specsRan, sr.FullText())
 	}
 
-	expectedLeafNodeTexts := []string{
-		`should allow to build connection pool using shard aware ports`,
-		`should create tuning resources and tune nodes`,
-		`should replace a node with orphaned PV`,
-		`should replace a node`,
-		`should setup and maintain up to date TLS certificates`,
-		`should forbid invalid requests`,
-		`with 3 member(s) and 1 rack(s) from 5.1.8 to 5.1.9`,
-		`should be reflected as a Service annotation`,
-		`with 1 member(s) and 1 rack(s) from 5.1.8 to 5.1.9`,
-		`should set container sysctl`,
-		`should re-bootstrap from old PVCs`,
-		`should support scaling`,
-		`with 3 member(s) and 2 rack(s) from 5.1.9 to 5.2.0`,
-		`should rotate TLS certificates before they expire`,
-		`with 3 member(s) and 1 rack(s) from 5.1.9 to 5.2.0`,
-		`with 1 member(s) and 1 rack(s) from 5.1.9 to 5.2.0`,
-		`should create ingress objects when ingress exposeOptions are provided`,
-		`should allow one disruption`,
-		`should discover cluster and sync tasks`,
-		`agent requires authentication`,
-		`should setup monitoring stack`,
-		`should reconcile resource changes`,
-		`should correctly project state for each scylla pod`,
-		`should claim preexisting member ServiceAccount and RoleBinding`,
+	expectedSpecs := []string{
+		"Node Setup should make RAID0, format it to XFS, and mount at desired location out of one loop device",
+		"Node Setup should make RAID0, format it to XFS, and mount at desired location out of three loop devices",
+		"NodeConfig Optimizations should correctly project state for each scylla pod",
+		"NodeConfig Optimizations should create tuning resources and tune nodes",
+		"Scylla Manager integration should discover cluster and sync tasks",
+		"ScyllaCluster HostID should be reflected as a Service annotation",
+		"ScyllaCluster Ingress should create ingress objects when ingress exposeOptions are provided",
+		"ScyllaCluster Orphaned PV controller should replace a node with orphaned PV",
+		"ScyllaCluster authentication agent requires authentication",
+		"ScyllaCluster evictions should allow one disruption",
+		"ScyllaCluster replace should replace a node",
+		"ScyllaCluster should allow to build connection pool using shard aware ports",
+		"ScyllaCluster should claim preexisting member ServiceAccount and RoleBinding",
+		"ScyllaCluster should re-bootstrap from old PVCs",
+		"ScyllaCluster should reconcile resource changes",
+		"ScyllaCluster should rotate TLS certificates before they expire",
+		"ScyllaCluster should setup and maintain up to date TLS certificates",
+		"ScyllaCluster should support scaling",
+		"ScyllaCluster sysctl should set container sysctl",
+		"ScyllaCluster upgrades should deploy and update with 1 member(s) and 1 rack(s) from 5.0.12 to 5.1.9",
+		"ScyllaCluster upgrades should deploy and update with 1 member(s) and 1 rack(s) from 5.1.8 to 5.1.9",
+		"ScyllaCluster upgrades should deploy and update with 3 member(s) and 1 rack(s) from 5.0.12 to 5.1.9",
+		"ScyllaCluster upgrades should deploy and update with 3 member(s) and 1 rack(s) from 5.1.8 to 5.1.9",
+		"ScyllaCluster upgrades should deploy and update with 3 member(s) and 2 rack(s) from 5.0.12 to 5.1.9",
+		"ScyllaCluster webhook should forbid invalid requests",
+		"ScyllaDBMonitoring should setup monitoring stack",
 	}
 
 	g.It("Should run all specs", func() {
-		o.Expect(maps.Keys(leafNodeTextsRanMap)).To(o.ConsistOf(expectedLeafNodeTexts))
+		o.Expect(specsRan).To(o.ConsistOf(expectedSpecs))
 	})
+
+	specsRanMap := make(map[string][]int, 0)
+	for _, sr := range []g.SpecReport(report.SpecReports) {
+		specsRanMap[sr.FullText()] = append(specsRanMap[sr.FullText()], sr.ParallelProcess)
+	}
 
 	entriesFn := func() []g.TableEntry {
 		entries := make([]g.TableEntry, 0)
-		for _, e := range expectedLeafNodeTexts {
+		for _, e := range expectedSpecs {
 			k := e
-			v := leafNodeTextsRanMap[k]
+			v := specsRanMap[k]
 			entries = append(entries, g.Entry(func(_ []int) string {
 				return fmt.Sprintf("%q on a single worker, but ran it on workers %v", k, v)
 			}, v))
